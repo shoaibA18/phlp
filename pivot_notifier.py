@@ -1,4 +1,4 @@
-SOL/USDT Spot — 4H Pivot High/Low Notifier
+SOL/USDT Spot  4H Pivot High/Low Notifier
 
 Fetches recent 4H candles from Binance's public REST API (no API key
 needed for market data), finds confirmed swing pivot highs/lows, and
