@@ -21,6 +21,14 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
+      - name: Debug - check secrets are visible
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then echo "TELEGRAM_BOT_TOKEN is EMPTY"; else echo "TELEGRAM_BOT_TOKEN is SET (length: ${#TELEGRAM_BOT_TOKEN})"; fi
+          if [ -z "$TELEGRAM_CHAT_ID" ]; then echo "TELEGRAM_CHAT_ID is EMPTY"; else echo "TELEGRAM_CHAT_ID is SET (length: ${#TELEGRAM_CHAT_ID})"; fi
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
       - name: Run pivot check
         run: python pivot_notifier.py
         env:
