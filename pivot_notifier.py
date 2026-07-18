@@ -1,14 +1,13 @@
-SOL/USDT Spot  4H Pivot High/Low Notifier
-
-Fetches recent 4H candles from Binance's public REST API (no API key
-needed for market data), finds confirmed swing pivot highs/lows, and
-sends a Telegram message for any pivot not already notified.
-
-State (the timestamp of the last pivot we notified about) is persisted
-to state.json so re-runs don't send duplicate alerts. When run inside
-the GitHub Actions workflow, that file gets committed back to the repo
-after each run.
-"""
+# SOL/USDT Spot - 4H Pivot High/Low Notifier
+#
+# Fetches recent 4H candles from Binance's public REST API (no API key
+# needed for market data), finds confirmed swing pivot highs/lows, and
+# sends a Telegram message for any pivot not already notified.
+#
+# State (the timestamp of the last pivot we notified about) is persisted
+# to state.json so re-runs don't send duplicate alerts. When run inside
+# the GitHub Actions workflow, that file gets committed back to the repo
+# after each run.
 
 import json
 import os
@@ -20,8 +19,14 @@ import requests
 # ---- Config -----------------------------------------------------------
 SYMBOL = "SOLUSDT"      # spot market
 INTERVAL = "4h"
-LEFT = 10                # candles required before the pivot bar
-RIGHT = 10               # candles required after the pivot bar (confirmation delay)
+
+# These mirror the Pine script's inputs exactly, unchanged:
+#   lb = input(defval = 10, title="Left Bars")
+#   rb = input(defval = 10, title="Right Bars")
+LB = 10                 # Left Bars
+RB = 10                 # Right Bars
+# mb = lb + rb + 1 (from the Pine script) is implicit in the LB/RB window below
+
 FETCH_LIMIT = 100        # how many recent candles to pull each run
 STATE_FILE = Path(__file__).parent / "state.json"
 # ------------------------------------------------------------------------
@@ -39,16 +44,29 @@ def fetch_klines():
 
 
 def find_pivots(klines):
-    """Return a list of (kind, open_time_ms, price) for confirmed pivots."""
+    """
+    Direct port of the Pine script's pivot logic:
+
+        plotshape(iff(not na(high[mb]), iff(highestbars(mb) == -lb, high[lb], na), na), ...)  # pivot high
+        plotshape(iff(not na(low[mb]),  iff(lowestbars(mb)  == -lb, low[lb],  na), na), ...)   # pivot low
+
+    A bar `lb` bars back from the evaluation point is a pivot high if its
+    high is the max over the mb-bar window (lb bars before it, itself, and
+    rb bars after it) — same window, same condition, just expressed as an
+    array slice instead of Pine's highestbars()/lowestbars(). Pivot low is
+    the exact mirror using lows and min().
+
+    Returns a list of (kind, open_time_ms, price) for confirmed pivots.
+    """
     highs = [float(k[2]) for k in klines]
     lows = [float(k[3]) for k in klines]
     times = [int(k[0]) for k in klines]
 
     pivots = []
     n = len(klines)
-    for i in range(LEFT, n - RIGHT):
-        window_high = highs[i - LEFT : i + RIGHT + 1]
-        window_low = lows[i - LEFT : i + RIGHT + 1]
+    for i in range(LB, n - RB):
+        window_high = highs[i - LB : i + RB + 1]
+        window_low = lows[i - LB : i + RB + 1]
         if highs[i] == max(window_high):
             pivots.append(("HIGH", times[i], highs[i]))
         if lows[i] == min(window_low):
@@ -92,7 +110,7 @@ def main():
     for kind, ts, price in new_pivots:
         readable = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(ts / 1000))
         msg = (
-            f"SOL/USDT Spot — 4H Pivot {kind}\n"
+            f"SOL/USDT Spot - 4H Pivot {kind}\n"
             f"Price: {price:.3f}\n"
             f"Candle: {readable}"
         )
