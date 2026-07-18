@@ -36,7 +36,7 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 
 def fetch_klines():
-    url = "https://api.binance.com/api/v3/klines"
+    url = "https://data-api.binance.vision/api/v3/klines"
     params = {"symbol": SYMBOL, "interval": INTERVAL, "limit": FETCH_LIMIT}
     resp = requests.get(url, params=params, timeout=15)
     resp.raise_for_status()
